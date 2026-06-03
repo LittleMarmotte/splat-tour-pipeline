@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{TITLE}} — Visite 3D</title>
+  <meta name="description" content="Visite virtuelle 3D de {{ADDRESS}}" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
+    #viewer { width: 100vw; height: 100vh; }
+    #hud {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.6); backdrop-filter: blur(8px);
+      padding: 8px 20px; border-radius: 999px; font-size: 14px; z-index: 10;
+      white-space: nowrap;
+    }
+    #controls {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.5); backdrop-filter: blur(8px);
+      padding: 8px 16px; border-radius: 8px; font-size: 12px;
+      color: rgba(255,255,255,.7); z-index: 10;
+    }
+    #loading {
+      position: fixed; inset: 0; background: #0a0a0a;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; z-index: 20;
+    }
+    #loading.hidden { display: none; }
+    .spinner {
+      width: 48px; height: 48px; border: 3px solid rgba(255,255,255,.2);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p style="font-size:14px;opacity:.7">Chargement de la visite…</p>
+</div>
+
+<div id="hud">{{TITLE}} — {{ADDRESS}}</div>
+
+<canvas id="viewer"></canvas>
+
+<div id="controls">
+  Clic + glisser : orbiter &nbsp;|&nbsp; Scroll : zoom &nbsp;|&nbsp; Clic droit : déplacer
+</div>
+
+<script type="module">
+  // SuperSplat viewer (standalone build)
+  // Source: https://github.com/playcanvas/supersplat
+  import { Viewer } from 'https://cdn.jsdelivr.net/npm/@playcanvas/splat-viewer@latest/dist/viewer.esm.min.js';
+
+  const SPLAT_URL = '{{SPLAT_URL}}';
+  const COLLISION_URL = '{{COLLISION_URL}}';
+
+  const canvas = document.getElementById('viewer');
+  const loading = document.getElementById('loading');
+
+  const viewer = new Viewer(canvas, {
+    cameraMode: 'orbit',
+    fov: 60,
+    background: { color: [0.04, 0.04, 0.04] },
+  });
+
+  viewer.load(SPLAT_URL, { type: 'sog' }).then(() => {
+    loading.classList.add('hidden');
+  }).catch(err => {
+    loading.innerHTML = `<p style="color:#f66">Erreur de chargement :(</p><pre style="font-size:11px;opacity:.5">${err}</pre>`;
+  });
+</script>
+
+</body>
+</html>

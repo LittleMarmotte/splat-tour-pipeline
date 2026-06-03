@@ -1,0 +1,81 @@
+{
+  "_comment": "Workflow 02 — Upload Done: déclenché par le frontend quand la vidéo est uploadée sur R2, lance RunPod",
+  "name": "02 - Upload Done",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "upload-done", "responseMode": "responseNode" },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "table": "jobs",
+        "id": "={{ $json.body.airtable_record_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "status", "fieldValue": "uploaded" }
+          ]
+        }
+      },
+      "name": "Update Status: uploaded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.runpod.io/v2/{{ $env.RUNPOD_ENDPOINT_ID }}/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.RUNPOD_API_KEY }}" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "input",
+            "value": "={ \"slug\": \"{{ $('Webhook').first().json.body.slug }}\", \"video_r2_path\": \"{{ $('Webhook').first().json.body.r2_video_path }}\", \"callback_url\": \"{{ $env.N8N_URL }}/webhook/gpu-done\", \"airtable_record_id\": \"{{ $('Webhook').first().json.body.airtable_record_id }}\" }"
+          }]
+        }
+      },
+      "name": "Trigger RunPod",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "table": "jobs",
+        "id": "={{ $('Webhook').first().json.body.airtable_record_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "status", "fieldValue": "processing" },
+            { "fieldId": "runpod_job_id", "fieldValue": "={{ $json.id }}" }
+          ]
+        }
+      },
+      "name": "Update Status: processing",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={\"ok\": true}" },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Update Status: uploaded", "type": "main", "index": 0 }]] },
+    "Update Status: uploaded": { "main": [[{ "node": "Trigger RunPod", "type": "main", "index": 0 }]] },
+    "Trigger RunPod": { "main": [[{ "node": "Update Status: processing", "type": "main", "index": 0 }]] },
+    "Update Status: processing": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}
