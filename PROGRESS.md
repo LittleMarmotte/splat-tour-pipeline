@@ -16,7 +16,7 @@
 | 3 | viewer-template/index.html.tmpl | ✅ Done |
 | 3 | infra/setup-pages.sh | ✅ Done |
 | 4 | frontend/ Next.js app | ⬜ Todo |
-| - | Airtable base creation | ⬜ Todo |
+| - | Airtable base creation | ✅ Done — appoz72CmfmW6Q0O0 |
 | - | n8n workflows import | ⬜ Todo |
 | - | RunPod endpoint creation | ⬜ Todo |
 
