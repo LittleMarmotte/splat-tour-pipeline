@@ -1,5 +1,5 @@
 {
-  "_comment": "Workflow 01 — New Tour: reçoit agent_email+address, crée le job Airtable, génère une presigned URL R2",
+  "_comment": "Workflow 01 — New Tour: reçoit agent_email+address, crée le job Airtable, génère une presigned URL R2 via AWS SDK",
   "name": "01 - New Tour",
   "nodes": [
     {
@@ -40,9 +40,9 @@
     },
     {
       "parameters": {
-        "jsCode": "const slug = $('Generate Slug').first().json.slug;\nconst r2VideoPath = `uploads/${slug}/video.mp4`;\nconst r2Endpoint = $env.R2_ENDPOINT;\nconst bucket = $env.R2_BUCKET;\n// Note: presigned URL generation requires AWS SDK — this is done by the frontend directly\n// We return the R2 path and the frontend calls /api/presign\nreturn [{ json: {\n  ok: true,\n  slug,\n  r2_video_path: r2VideoPath,\n  airtable_record_id: $('Create Airtable Job').first().json.id\n}}];"
+        "jsCode": "const AWS = require('aws-sdk');\n\nconst slug = $('Generate Slug').first().json.slug;\nconst r2VideoPath = `uploads/${slug}/video.mp4`;\n\nconst s3 = new AWS.S3({\n  endpoint: `https://${$env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,\n  accessKeyId: $env.R2_ACCESS_KEY_ID,\n  secretAccessKey: $env.R2_SECRET_ACCESS_KEY,\n  region: 'auto',\n  signatureVersion: 'v4',\n  s3ForcePathStyle: true,\n});\n\nconst uploadUrl = await s3.getSignedUrlPromise('putObject', {\n  Bucket: $env.R2_BUCKET,\n  Key: r2VideoPath,\n  Expires: 3600,\n  ContentType: 'video/mp4',\n});\n\nreturn [{ json: {\n  ok: true,\n  slug,\n  upload_url: uploadUrl,\n  r2_video_path: r2VideoPath,\n  airtable_record_id: $('Create Airtable Job').first().json.id\n}}];"
       },
-      "name": "Build Response",
+      "name": "Generate Presigned URL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [900, 300]
@@ -61,7 +61,7 @@
   "connections": {
     "Webhook": { "main": [[{ "node": "Generate Slug", "type": "main", "index": 0 }]] },
     "Generate Slug": { "main": [[{ "node": "Create Airtable Job", "type": "main", "index": 0 }]] },
-    "Create Airtable Job": { "main": [[{ "node": "Build Response", "type": "main", "index": 0 }]] },
-    "Build Response": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Create Airtable Job": { "main": [[{ "node": "Generate Presigned URL", "type": "main", "index": 0 }]] },
+    "Generate Presigned URL": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
   }
 }
