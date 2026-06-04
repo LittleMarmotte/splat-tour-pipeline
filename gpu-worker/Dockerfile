@@ -2,9 +2,10 @@ FROM dromni/nerfstudio:1.1.3
 
 USER root
 
-# Install Node.js for splat-transform
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
+# Install Node.js 20 for splat-transform (remove conflicting libnode-dev first)
+RUN apt-get remove -y nodejs libnode-dev libnode72 2>/dev/null || true && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y -o Dpkg::Options::="--force-overwrite" nodejs && \
     npm install -g @playcanvas/splat-transform
 
 # Install AWS CLI for R2 access
