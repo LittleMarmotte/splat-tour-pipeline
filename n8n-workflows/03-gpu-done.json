@@ -23,7 +23,7 @@
     {
       "parameters": {
         "operation": "update",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "application": "appoz72CmfmW6Q0O0",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.record_id }}",
         "fieldsUi": {
@@ -41,7 +41,7 @@
     {
       "parameters": {
         "operation": "update",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "application": "appoz72CmfmW6Q0O0",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.record_id }}",
         "fieldsUi": {
@@ -58,7 +58,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst cfAccountId = $env.CF_ACCOUNT_ID;\nconst cfToken = $env.CF_API_TOKEN;\nconst project = $env.CF_PAGES_PROJECT || 'splat-tours-viewer';\nconst r2Base = `https://${$env.R2_BUCKET}.${cfAccountId}.r2.cloudflarestorage.com`;\nconst splatUrl = `${r2Base}/outputs/${slug}/scene.sog`;\nconst collisionUrl = `${r2Base}/outputs/${slug}/collision.glb`;\n\n// Fetch record to get address/title\nreturn [{ json: { slug, cfAccountId, cfToken, project, splatUrl, collisionUrl } }];"
+        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst cfAccountId = '25d9ef891cf119ded0353067cd5891ad';\nconst r2Base = `https://splat-tours.${cfAccountId}.r2.cloudflarestorage.com`;\nconst splatUrl = `${r2Base}/outputs/${slug}/scene.sog`;\nconst collisionUrl = `${r2Base}/outputs/${slug}/collision.glb`;\nreturn [{ json: { slug, cfAccountId, splatUrl, collisionUrl } }];"
       },
       "name": "Prepare Deploy",
       "type": "n8n-nodes-base.code",
@@ -67,18 +67,11 @@
     },
     {
       "parameters": {
-        "url": "=https://api.airtable.com/v0/{{ $env.AIRTABLE_BASE_ID }}/jobs",
+        "url": "=https://api.airtable.com/v0/appoz72CmfmW6Q0O0/jobs?filterByFormula={{ encodeURIComponent(\"{slug}='\" + $('Webhook').first().json.body.slug + \"'\") }}&maxRecords=1",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.AIRTABLE_TOKEN }}" }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "filterByFormula", "value": "={{ \"{slug}='\" + $('Webhook').first().json.body.slug + \"'\" }}" },
-            { "name": "maxRecords", "value": "1" }
+            { "name": "Authorization", "value": "Bearer patffVwJxOPmk1Hnl.28b281f4606bbcf592f4596c4d2f70ff02c9edada3ceee281d258f11f2086fe2" }
           ]
         }
       },
@@ -89,18 +82,18 @@
     },
     {
       "parameters": {
-        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $('Prepare Deploy').first().json.cfAccountId }}/pages/projects/{{ $('Prepare Deploy').first().json.project }}/deployments",
+        "url": "=https://api.cloudflare.com/client/v4/accounts/25d9ef891cf119ded0353067cd5891ad/pages/projects/splat-tours-viewer/deployments",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.CF_API_TOKEN }}" }
+            { "name": "Authorization", "value": "Bearer cfut_hsbdXr9h5jHeKK3bt2QKiOts1kgJttol66Cw0iEka7140f5c" }
           ]
         },
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
           "parameters": [
-            { "name": "manifest", "value": "={\"{{ $('Webhook').first().json.body.slug }}/index.html\": \"{{ $now.toMillis() }}\"}" }
+            { "name": "manifest", "value": "={{ JSON.stringify({ [$('Webhook').first().json.body.slug + '/index.html']: String($now.toMillis()) }) }}" }
           ]
         }
       },
@@ -111,7 +104,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst toursDomain = $env.TOURS_DOMAIN || 'splat-tours.pages.dev';\nconst tourUrl = `https://${toursDomain}/${slug}`;\nconst record = $('Get Job Record').first().json.records?.[0];\nreturn [{ json: { tourUrl, agentEmail: record?.fields?.agent_email, address: record?.fields?.address, slug } }];"
+        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst tourUrl = `https://splat-tours.pages.dev/${slug}`;\nconst record = $('Get Job Record').first().json.records?.[0];\nreturn [{ json: { tourUrl, agentEmail: record?.fields?.agent_email, address: record?.fields?.address, slug } }];"
       },
       "name": "Build Tour URL",
       "type": "n8n-nodes-base.code",
@@ -121,7 +114,7 @@
     {
       "parameters": {
         "operation": "update",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "application": "appoz72CmfmW6Q0O0",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.record_id }}",
         "fieldsUi": {
@@ -142,13 +135,13 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.RESEND_API_KEY }}" },
+            { "name": "Authorization", "value": "Bearer re_PM7Wvif8_JUG3UbMyor8wXqECvzH9nnkV" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"from\": \"{{ $env.RESEND_FROM }}\",\n  \"to\": [\"{{ $('Build Tour URL').first().json.agentEmail }}\"],\n  \"subject\": \"Votre visite 3D est prête — {{ $('Build Tour URL').first().json.address }}\",\n  \"html\": \"<h2>Votre visite 3D est prête !</h2><p>Adresse : <strong>{{ $('Build Tour URL').first().json.address }}</strong></p><p><a href='{{ $('Build Tour URL').first().json.tourUrl }}' style='display:inline-block;padding:12px 24px;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-family:sans-serif'>Voir la visite 3D</a></p><p>Vous pouvez intégrer la visite sur votre site avec ce code iframe :</p><pre style='background:#f4f4f4;padding:12px;border-radius:4px;font-size:12px'>&lt;iframe src='{{ $('Build Tour URL').first().json.tourUrl }}' width='100%' height='600' frameborder='0' allowfullscreen&gt;&lt;/iframe&gt;</pre>\"\n}"
+        "jsonBody": "={\n  \"from\": \"Splat Tours <noreply@splat-tours.fr>\",\n  \"to\": [\"{{ $('Build Tour URL').first().json.agentEmail }}\"],\n  \"subject\": \"Votre visite 3D est prête — {{ $('Build Tour URL').first().json.address }}\",\n  \"html\": \"<h2>Votre visite 3D est prête !</h2><p>Adresse : <strong>{{ $('Build Tour URL').first().json.address }}</strong></p><p><a href='{{ $('Build Tour URL').first().json.tourUrl }}' style='display:inline-block;padding:12px 24px;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-family:sans-serif'>Voir la visite 3D</a></p><p>Intégrer sur votre site :</p><pre style='background:#f4f4f4;padding:12px;border-radius:4px;font-size:12px'>&lt;iframe src='{{ $('Build Tour URL').first().json.tourUrl }}' width='100%' height='600' frameborder='0' allowfullscreen&gt;&lt;/iframe&gt;</pre>\"\n}"
       },
       "name": "Send Email via Resend",
       "type": "n8n-nodes-base.httpRequest",

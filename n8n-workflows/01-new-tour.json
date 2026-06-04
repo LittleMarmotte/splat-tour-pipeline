@@ -1,5 +1,5 @@
 {
-  "_comment": "Workflow 01 — New Tour: reçoit agent_email+address, crée le job Airtable, génère une presigned URL R2 via AWS SDK",
+  "_comment": "Workflow 01 — New Tour: reçoit agent_email+address, crée le job Airtable, génère une presigned URL R2",
   "name": "01 - New Tour",
   "nodes": [
     {
@@ -21,7 +21,7 @@
     {
       "parameters": {
         "operation": "create",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "application": "appoz72CmfmW6Q0O0",
         "table": "jobs",
         "fieldsUi": {
           "fieldValues": [
@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const AWS = require('aws-sdk');\n\nconst slug = $('Generate Slug').first().json.slug;\nconst r2VideoPath = `uploads/${slug}/video.mp4`;\n\nconst s3 = new AWS.S3({\n  endpoint: `https://${$env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,\n  accessKeyId: $env.R2_ACCESS_KEY_ID,\n  secretAccessKey: $env.R2_SECRET_ACCESS_KEY,\n  region: 'auto',\n  signatureVersion: 'v4',\n  s3ForcePathStyle: true,\n});\n\nconst uploadUrl = await s3.getSignedUrlPromise('putObject', {\n  Bucket: $env.R2_BUCKET,\n  Key: r2VideoPath,\n  Expires: 3600,\n  ContentType: 'video/mp4',\n});\n\nreturn [{ json: {\n  ok: true,\n  slug,\n  upload_url: uploadUrl,\n  r2_video_path: r2VideoPath,\n  airtable_record_id: $('Create Airtable Job').first().json.id\n}}];"
+        "jsCode": "const AWS = require('aws-sdk');\n\nconst slug = $('Generate Slug').first().json.slug;\nconst r2VideoPath = `uploads/${slug}/video.mp4`;\n\nconst s3 = new AWS.S3({\n  endpoint: 'https://25d9ef891cf119ded0353067cd5891ad.r2.cloudflarestorage.com',\n  accessKeyId: '74ad56968b32705d8575e0d6c7255a0d',\n  secretAccessKey: '4c1d6e0954a06908412564dde4ecd7c37e9d18c17d269d8d0b3c196ab7ed8de3',\n  region: 'auto',\n  signatureVersion: 'v4',\n  s3ForcePathStyle: true,\n});\n\nconst uploadUrl = await s3.getSignedUrlPromise('putObject', {\n  Bucket: 'splat-tours',\n  Key: r2VideoPath,\n  Expires: 3600,\n  ContentType: 'video/mp4',\n});\n\nreturn [{ json: {\n  ok: true,\n  slug,\n  upload_url: uploadUrl,\n  r2_video_path: r2VideoPath,\n  airtable_record_id: $('Create Airtable Job').first().json.id\n}}];"
       },
       "name": "Generate Presigned URL",
       "type": "n8n-nodes-base.code",

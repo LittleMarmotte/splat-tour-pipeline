@@ -12,7 +12,7 @@
     {
       "parameters": {
         "operation": "update",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "application": "appoz72CmfmW6Q0O0",
         "table": "jobs",
         "id": "={{ $json.body.airtable_record_id }}",
         "fieldsUi": {
@@ -28,18 +28,16 @@
     },
     {
       "parameters": {
-        "url": "=https://api.runpod.io/v2/{{ $env.RUNPOD_ENDPOINT_ID }}/run",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.runpod.io/v2/PENDING/run",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.RUNPOD_API_KEY }}" }] },
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer rpa_XFOO6RLUBWBKJ0P0U60ZWLY5902JD6VQHBKQZQOM11m76c" }
+          ]
+        },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [{
-            "name": "input",
-            "value": "={ \"slug\": \"{{ $('Webhook').first().json.body.slug }}\", \"video_r2_path\": \"{{ $('Webhook').first().json.body.r2_video_path }}\", \"callback_url\": \"{{ $env.N8N_URL }}/webhook/gpu-done\", \"airtable_record_id\": \"{{ $('Webhook').first().json.body.airtable_record_id }}\" }"
-          }]
-        }
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": {\n    \"slug\": \"{{ $('Webhook').first().json.body.slug }}\",\n    \"video_r2_path\": \"{{ $('Webhook').first().json.body.r2_video_path }}\",\n    \"callback_url\": \"https://n8n.srv1251162.hstgr.cloud/webhook/gpu-done\",\n    \"airtable_record_id\": \"{{ $('Webhook').first().json.body.airtable_record_id }}\"\n  }\n}"
       },
       "name": "Trigger RunPod",
       "type": "n8n-nodes-base.httpRequest",
@@ -49,7 +47,7 @@
     {
       "parameters": {
         "operation": "update",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
+        "application": "appoz72CmfmW6Q0O0",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.airtable_record_id }}",
         "fieldsUi": {
