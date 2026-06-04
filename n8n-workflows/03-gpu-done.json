@@ -67,15 +67,24 @@
     },
     {
       "parameters": {
-        "operation": "getMany",
-        "application": "={{ $env.AIRTABLE_BASE_ID }}",
-        "table": "jobs",
-        "filterByFormula": "={slug}='{{ $('Webhook').first().json.body.slug }}'",
-        "limit": 1
+        "url": "=https://api.airtable.com/v0/{{ $env.AIRTABLE_BASE_ID }}/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.AIRTABLE_TOKEN }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "filterByFormula", "value": "={{ \"{slug}='\" + $('Webhook').first().json.body.slug + \"'\" }}" },
+            { "name": "maxRecords", "value": "1" }
+          ]
+        }
       },
       "name": "Get Job Record",
-      "type": "n8n-nodes-base.airtable",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
       "position": [1100, 200]
     },
     {
@@ -102,7 +111,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst toursDomain = $env.TOURS_DOMAIN || 'tours.example.com';\nconst tourUrl = `https://${toursDomain}/${slug}`;\nconst record = $('Get Job Record').first().json;\nreturn [{ json: { tourUrl, agentEmail: record.fields?.agent_email, address: record.fields?.address, slug } }];"
+        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst toursDomain = $env.TOURS_DOMAIN || 'splat-tours.pages.dev';\nconst tourUrl = `https://${toursDomain}/${slug}`;\nconst record = $('Get Job Record').first().json.records?.[0];\nreturn [{ json: { tourUrl, agentEmail: record?.fields?.agent_email, address: record?.fields?.address, slug } }];"
       },
       "name": "Build Tour URL",
       "type": "n8n-nodes-base.code",
