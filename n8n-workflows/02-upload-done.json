@@ -11,10 +11,27 @@
     },
     {
       "parameters": {
+        "values": {
+          "string": [
+            { "name": "AIRTABLE_BASE_ID",    "value": "appoz72CmfmW6Q0O0" },
+            { "name": "RUNPOD_API_KEY",       "value": "rpa_XFOO6RLUBWBKJ0P0U60ZWLY5902JD6VQHBKQZQOM11m76c" },
+            { "name": "RUNPOD_ENDPOINT_ID",   "value": "PENDING" },
+            { "name": "N8N_CALLBACK_URL",     "value": "https://n8n.srv1251162.hstgr.cloud/webhook/gpu-done" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "operation": "update",
-        "application": "appoz72CmfmW6Q0O0",
+        "application": "={{ $('Config').first().json.AIRTABLE_BASE_ID }}",
         "table": "jobs",
-        "id": "={{ $json.body.airtable_record_id }}",
+        "id": "={{ $('Webhook').first().json.body.airtable_record_id }}",
         "fieldsUi": {
           "fieldValues": [
             { "fieldId": "status", "fieldValue": "uploaded" }
@@ -24,35 +41,35 @@
       "name": "Update Status: uploaded",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "url": "https://api.runpod.io/v2/PENDING/run",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Authorization", "value": "Bearer rpa_XFOO6RLUBWBKJ0P0U60ZWLY5902JD6VQHBKQZQOM11m76c" }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"input\": {\n    \"slug\": \"{{ $('Webhook').first().json.body.slug }}\",\n    \"video_r2_path\": \"{{ $('Webhook').first().json.body.r2_video_path }}\",\n    \"callback_url\": \"https://n8n.srv1251162.hstgr.cloud/webhook/gpu-done\",\n    \"airtable_record_id\": \"{{ $('Webhook').first().json.body.airtable_record_id }}\"\n  }\n}"
-      },
-      "name": "Trigger RunPod",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
       "position": [680, 300]
     },
     {
       "parameters": {
+        "url": "=https://api.runpod.io/v2/{{ $('Config').first().json.RUNPOD_ENDPOINT_ID }}/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Config').first().json.RUNPOD_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": {\n    \"slug\": \"{{ $('Webhook').first().json.body.slug }}\",\n    \"video_r2_path\": \"{{ $('Webhook').first().json.body.r2_video_path }}\",\n    \"callback_url\": \"{{ $('Config').first().json.N8N_CALLBACK_URL }}\",\n    \"airtable_record_id\": \"{{ $('Webhook').first().json.body.airtable_record_id }}\"\n  }\n}"
+      },
+      "name": "Trigger RunPod",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
         "operation": "update",
-        "application": "appoz72CmfmW6Q0O0",
+        "application": "={{ $('Config').first().json.AIRTABLE_BASE_ID }}",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.airtable_record_id }}",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldId": "status", "fieldValue": "processing" },
+            { "fieldId": "status",        "fieldValue": "processing" },
             { "fieldId": "runpod_job_id", "fieldValue": "={{ $json.id }}" }
           ]
         }
@@ -60,20 +77,21 @@
       "name": "Update Status: processing",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [1120, 300]
     },
     {
       "parameters": { "respondWith": "json", "responseBody": "={\"ok\": true}" },
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 300]
+      "position": [1340, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Update Status: uploaded", "type": "main", "index": 0 }]] },
-    "Update Status: uploaded": { "main": [[{ "node": "Trigger RunPod", "type": "main", "index": 0 }]] },
-    "Trigger RunPod": { "main": [[{ "node": "Update Status: processing", "type": "main", "index": 0 }]] },
-    "Update Status: processing": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Webhook":                  { "main": [[{ "node": "Config",                   "type": "main", "index": 0 }]] },
+    "Config":                   { "main": [[{ "node": "Update Status: uploaded",  "type": "main", "index": 0 }]] },
+    "Update Status: uploaded":  { "main": [[{ "node": "Trigger RunPod",           "type": "main", "index": 0 }]] },
+    "Trigger RunPod":           { "main": [[{ "node": "Update Status: processing","type": "main", "index": 0 }]] },
+    "Update Status: processing":{ "main": [[{ "node": "Respond",                  "type": "main", "index": 0 }]] }
   }
 }

@@ -11,24 +11,44 @@
     },
     {
       "parameters": {
-        "jsCode": "const { agent_email, address } = $input.first().json.body;\nif (!agent_email || !address) throw new Error('Missing agent_email or address');\nconst chars = 'abcdefghijklmnopqrstuvwxyz0123456789';\nconst rand6 = Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');\nconst slug = address.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,50) + '-' + rand6;\nreturn [{ json: { slug, agent_email, address } }];"
+        "values": {
+          "string": [
+            { "name": "AIRTABLE_BASE_ID",     "value": "appoz72CmfmW6Q0O0" },
+            { "name": "AIRTABLE_TOKEN",       "value": "patffVwJxOPmk1Hnl.28b281f4606bbcf592f4596c4d2f70ff02c9edada3ceee281d258f11f2086fe2" },
+            { "name": "CF_ACCOUNT_ID",        "value": "25d9ef891cf119ded0353067cd5891ad" },
+            { "name": "R2_ENDPOINT",          "value": "https://25d9ef891cf119ded0353067cd5891ad.r2.cloudflarestorage.com" },
+            { "name": "R2_BUCKET",            "value": "splat-tours" },
+            { "name": "R2_ACCESS_KEY_ID",     "value": "74ad56968b32705d8575e0d6c7255a0d" },
+            { "name": "R2_SECRET_ACCESS_KEY", "value": "4c1d6e0954a06908412564dde4ecd7c37e9d18c17d269d8d0b3c196ab7ed8de3" }
+          ]
+        },
+        "options": {}
       },
-      "name": "Generate Slug",
-      "type": "n8n-nodes-base.code",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [460, 300]
     },
     {
       "parameters": {
+        "jsCode": "const { agent_email, address } = $('Webhook').first().json.body;\nif (!agent_email || !address) throw new Error('Missing agent_email or address');\nconst chars = 'abcdefghijklmnopqrstuvwxyz0123456789';\nconst rand6 = Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');\nconst slug = address.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,50) + '-' + rand6;\nreturn [{ json: { ...$('Config').first().json, slug, agent_email, address } }];"
+      },
+      "name": "Generate Slug",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
         "operation": "create",
-        "application": "appoz72CmfmW6Q0O0",
+        "application": "={{ $('Config').first().json.AIRTABLE_BASE_ID }}",
         "table": "jobs",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldId": "slug", "fieldValue": "={{ $json.slug }}" },
-            { "fieldId": "agent_email", "fieldValue": "={{ $json.agent_email }}" },
-            { "fieldId": "address", "fieldValue": "={{ $json.address }}" },
-            { "fieldId": "status", "fieldValue": "awaiting_upload" },
+            { "fieldId": "slug",          "fieldValue": "={{ $json.slug }}" },
+            { "fieldId": "agent_email",   "fieldValue": "={{ $json.agent_email }}" },
+            { "fieldId": "address",       "fieldValue": "={{ $json.address }}" },
+            { "fieldId": "status",        "fieldValue": "awaiting_upload" },
             { "fieldId": "r2_video_path", "fieldValue": "=uploads/{{ $json.slug }}/video.mp4" }
           ]
         }
@@ -36,32 +56,30 @@
       "name": "Create Airtable Job",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2,
-      "position": [680, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const AWS = require('aws-sdk');\n\nconst slug = $('Generate Slug').first().json.slug;\nconst r2VideoPath = `uploads/${slug}/video.mp4`;\n\nconst s3 = new AWS.S3({\n  endpoint: 'https://25d9ef891cf119ded0353067cd5891ad.r2.cloudflarestorage.com',\n  accessKeyId: '74ad56968b32705d8575e0d6c7255a0d',\n  secretAccessKey: '4c1d6e0954a06908412564dde4ecd7c37e9d18c17d269d8d0b3c196ab7ed8de3',\n  region: 'auto',\n  signatureVersion: 'v4',\n  s3ForcePathStyle: true,\n});\n\nconst uploadUrl = await s3.getSignedUrlPromise('putObject', {\n  Bucket: 'splat-tours',\n  Key: r2VideoPath,\n  Expires: 3600,\n  ContentType: 'video/mp4',\n});\n\nreturn [{ json: {\n  ok: true,\n  slug,\n  upload_url: uploadUrl,\n  r2_video_path: r2VideoPath,\n  airtable_record_id: $('Create Airtable Job').first().json.id\n}}];"
-      },
-      "name": "Generate Presigned URL",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [900, 300]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}"
+        "jsCode": "const cfg = $('Config').first().json;\nconst slug = $('Generate Slug').first().json.slug;\nconst r2VideoPath = `uploads/${slug}/video.mp4`;\n\nconst AWS = require('aws-sdk');\nconst s3 = new AWS.S3({\n  endpoint: cfg.R2_ENDPOINT,\n  accessKeyId: cfg.R2_ACCESS_KEY_ID,\n  secretAccessKey: cfg.R2_SECRET_ACCESS_KEY,\n  region: 'auto',\n  signatureVersion: 'v4',\n  s3ForcePathStyle: true,\n});\n\nconst uploadUrl = await s3.getSignedUrlPromise('putObject', {\n  Bucket: cfg.R2_BUCKET,\n  Key: r2VideoPath,\n  Expires: 3600,\n  ContentType: 'video/mp4',\n});\n\nreturn [{ json: {\n  ok: true,\n  slug,\n  upload_url: uploadUrl,\n  r2_video_path: r2VideoPath,\n  airtable_record_id: $('Create Airtable Job').first().json.id\n}}];"
       },
+      "name": "Generate Presigned URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ $json }}" },
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 300]
+      "position": [1340, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Generate Slug", "type": "main", "index": 0 }]] },
-    "Generate Slug": { "main": [[{ "node": "Create Airtable Job", "type": "main", "index": 0 }]] },
-    "Create Airtable Job": { "main": [[{ "node": "Generate Presigned URL", "type": "main", "index": 0 }]] },
-    "Generate Presigned URL": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Webhook":               { "main": [[{ "node": "Config",                "type": "main", "index": 0 }]] },
+    "Config":                { "main": [[{ "node": "Generate Slug",         "type": "main", "index": 0 }]] },
+    "Generate Slug":         { "main": [[{ "node": "Create Airtable Job",   "type": "main", "index": 0 }]] },
+    "Create Airtable Job":   { "main": [[{ "node": "Generate Presigned URL","type": "main", "index": 0 }]] },
+    "Generate Presigned URL":{ "main": [[{ "node": "Respond",              "type": "main", "index": 0 }]] }
   }
 }

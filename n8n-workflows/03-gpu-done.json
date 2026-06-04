@@ -11,24 +11,46 @@
     },
     {
       "parameters": {
+        "values": {
+          "string": [
+            { "name": "AIRTABLE_BASE_ID",   "value": "appoz72CmfmW6Q0O0" },
+            { "name": "AIRTABLE_TOKEN",     "value": "patffVwJxOPmk1Hnl.28b281f4606bbcf592f4596c4d2f70ff02c9edada3ceee281d258f11f2086fe2" },
+            { "name": "CF_ACCOUNT_ID",      "value": "25d9ef891cf119ded0353067cd5891ad" },
+            { "name": "CF_API_TOKEN",       "value": "cfut_hsbdXr9h5jHeKK3bt2QKiOts1kgJttol66Cw0iEka7140f5c" },
+            { "name": "CF_PAGES_PROJECT",   "value": "splat-tours-viewer" },
+            { "name": "R2_BUCKET",          "value": "splat-tours" },
+            { "name": "TOURS_DOMAIN",       "value": "splat-tours.pages.dev" },
+            { "name": "RESEND_API_KEY",     "value": "re_PM7Wvif8_JUG3UbMyor8wXqECvzH9nnkV" },
+            { "name": "RESEND_FROM",        "value": "Splat Tours <noreply@splat-tours.fr>" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "conditions": {
-          "string": [{ "value1": "={{ $json.body.status }}", "operation": "equal", "value2": "done" }]
+          "string": [{ "value1": "={{ $('Webhook').first().json.body.status }}", "operation": "equal", "value2": "done" }]
         }
       },
       "name": "Success?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [460, 300]
+      "position": [680, 300]
     },
     {
       "parameters": {
         "operation": "update",
-        "application": "appoz72CmfmW6Q0O0",
+        "application": "={{ $('Config').first().json.AIRTABLE_BASE_ID }}",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.record_id }}",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldId": "status", "fieldValue": "failed" },
+            { "fieldId": "status",        "fieldValue": "failed" },
             { "fieldId": "error_message", "fieldValue": "={{ $('Webhook').first().json.body.error }}" }
           ]
         }
@@ -36,57 +58,64 @@
       "name": "Update: failed",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2,
-      "position": [680, 500]
+      "position": [900, 500]
     },
     {
       "parameters": {
         "operation": "update",
-        "application": "appoz72CmfmW6Q0O0",
+        "application": "={{ $('Config').first().json.AIRTABLE_BASE_ID }}",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.record_id }}",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldId": "status", "fieldValue": "building" },
-            { "fieldId": "r2_splat_path", "fieldValue": "={{ $('Webhook').first().json.body.r2_splat_path }}" }
+            { "fieldId": "status",       "fieldValue": "building" },
+            { "fieldId": "r2_splat_path","fieldValue": "={{ $('Webhook').first().json.body.r2_splat_path }}" }
           ]
         }
       },
       "name": "Update: building",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2,
-      "position": [680, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst cfAccountId = '25d9ef891cf119ded0353067cd5891ad';\nconst r2Base = `https://splat-tours.${cfAccountId}.r2.cloudflarestorage.com`;\nconst splatUrl = `${r2Base}/outputs/${slug}/scene.sog`;\nconst collisionUrl = `${r2Base}/outputs/${slug}/collision.glb`;\nreturn [{ json: { slug, cfAccountId, splatUrl, collisionUrl } }];"
-      },
-      "name": "Prepare Deploy",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [900, 200]
     },
     {
       "parameters": {
-        "url": "=https://api.airtable.com/v0/appoz72CmfmW6Q0O0/jobs?filterByFormula={{ encodeURIComponent(\"{slug}='\" + $('Webhook').first().json.body.slug + \"'\") }}&maxRecords=1",
+        "jsCode": "const cfg = $('Config').first().json;\nconst slug = $('Webhook').first().json.body.slug;\nconst r2Base = `https://${cfg.R2_BUCKET}.${cfg.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;\nconst splatUrl = `${r2Base}/outputs/${slug}/scene.sog`;\nconst collisionUrl = `${r2Base}/outputs/${slug}/collision.glb`;\nreturn [{ json: { slug, splatUrl, collisionUrl } }];"
+      },
+      "name": "Prepare Deploy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/{{ $('Config').first().json.AIRTABLE_BASE_ID }}/jobs",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer patffVwJxOPmk1Hnl.28b281f4606bbcf592f4596c4d2f70ff02c9edada3ceee281d258f11f2086fe2" }
+            { "name": "Authorization", "value": "=Bearer {{ $('Config').first().json.AIRTABLE_TOKEN }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "filterByFormula", "value": "={{ \"{slug}='\" + $('Webhook').first().json.body.slug + \"'\" }}" },
+            { "name": "maxRecords",      "value": "1" }
           ]
         }
       },
       "name": "Get Job Record",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1100, 200]
+      "position": [1340, 200]
     },
     {
       "parameters": {
-        "url": "=https://api.cloudflare.com/client/v4/accounts/25d9ef891cf119ded0353067cd5891ad/pages/projects/splat-tours-viewer/deployments",
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $('Config').first().json.CF_ACCOUNT_ID }}/pages/projects/{{ $('Config').first().json.CF_PAGES_PROJECT }}/deployments",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer cfut_hsbdXr9h5jHeKK3bt2QKiOts1kgJttol66Cw0iEka7140f5c" }
+            { "name": "Authorization", "value": "=Bearer {{ $('Config').first().json.CF_API_TOKEN }}" }
           ]
         },
         "sendBody": true,
@@ -100,26 +129,26 @@
       "name": "Deploy to CF Pages",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1300, 200]
+      "position": [1560, 200]
     },
     {
       "parameters": {
-        "jsCode": "const slug = $('Webhook').first().json.body.slug;\nconst tourUrl = `https://splat-tours.pages.dev/${slug}`;\nconst record = $('Get Job Record').first().json.records?.[0];\nreturn [{ json: { tourUrl, agentEmail: record?.fields?.agent_email, address: record?.fields?.address, slug } }];"
+        "jsCode": "const cfg = $('Config').first().json;\nconst slug = $('Webhook').first().json.body.slug;\nconst tourUrl = `https://${cfg.TOURS_DOMAIN}/${slug}`;\nconst record = $('Get Job Record').first().json.records?.[0];\nreturn [{ json: { tourUrl, agentEmail: record?.fields?.agent_email, address: record?.fields?.address, slug } }];"
       },
       "name": "Build Tour URL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1500, 200]
+      "position": [1780, 200]
     },
     {
       "parameters": {
         "operation": "update",
-        "application": "appoz72CmfmW6Q0O0",
+        "application": "={{ $('Config').first().json.AIRTABLE_BASE_ID }}",
         "table": "jobs",
         "id": "={{ $('Webhook').first().json.body.record_id }}",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldId": "status", "fieldValue": "done" },
+            { "fieldId": "status",   "fieldValue": "done" },
             { "fieldId": "tour_url", "fieldValue": "={{ $('Build Tour URL').first().json.tourUrl }}" }
           ]
         }
@@ -127,7 +156,7 @@
       "name": "Update: done",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2,
-      "position": [1700, 200]
+      "position": [2000, 200]
     },
     {
       "parameters": {
@@ -135,41 +164,42 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer re_PM7Wvif8_JUG3UbMyor8wXqECvzH9nnkV" },
-            { "name": "Content-Type", "value": "application/json" }
+            { "name": "Authorization", "value": "=Bearer {{ $('Config').first().json.RESEND_API_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"from\": \"Splat Tours <noreply@splat-tours.fr>\",\n  \"to\": [\"{{ $('Build Tour URL').first().json.agentEmail }}\"],\n  \"subject\": \"Votre visite 3D est prête — {{ $('Build Tour URL').first().json.address }}\",\n  \"html\": \"<h2>Votre visite 3D est prête !</h2><p>Adresse : <strong>{{ $('Build Tour URL').first().json.address }}</strong></p><p><a href='{{ $('Build Tour URL').first().json.tourUrl }}' style='display:inline-block;padding:12px 24px;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-family:sans-serif'>Voir la visite 3D</a></p><p>Intégrer sur votre site :</p><pre style='background:#f4f4f4;padding:12px;border-radius:4px;font-size:12px'>&lt;iframe src='{{ $('Build Tour URL').first().json.tourUrl }}' width='100%' height='600' frameborder='0' allowfullscreen&gt;&lt;/iframe&gt;</pre>\"\n}"
+        "jsonBody": "={\n  \"from\": \"{{ $('Config').first().json.RESEND_FROM }}\",\n  \"to\": [\"{{ $('Build Tour URL').first().json.agentEmail }}\"],\n  \"subject\": \"Votre visite 3D est prête — {{ $('Build Tour URL').first().json.address }}\",\n  \"html\": \"<h2>Votre visite 3D est prête !</h2><p>Adresse : <strong>{{ $('Build Tour URL').first().json.address }}</strong></p><p><a href='{{ $('Build Tour URL').first().json.tourUrl }}' style='display:inline-block;padding:12px 24px;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-family:sans-serif'>Voir la visite 3D</a></p><p>Intégrer sur votre site :</p><pre style='background:#f4f4f4;padding:12px;border-radius:4px;font-size:12px'>&lt;iframe src='{{ $('Build Tour URL').first().json.tourUrl }}' width='100%' height='600' frameborder='0' allowfullscreen&gt;&lt;/iframe&gt;</pre>\"\n}"
       },
       "name": "Send Email via Resend",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1900, 200]
+      "position": [2220, 200]
     },
     {
       "parameters": { "respondWith": "json", "responseBody": "={\"ok\": true}" },
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2100, 200]
+      "position": [2440, 200]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Success?", "type": "main", "index": 0 }]] },
+    "Webhook":          { "main": [[{ "node": "Config",           "type": "main", "index": 0 }]] },
+    "Config":           { "main": [[{ "node": "Success?",         "type": "main", "index": 0 }]] },
     "Success?": {
       "main": [
         [{ "node": "Update: building", "type": "main", "index": 0 }],
-        [{ "node": "Update: failed", "type": "main", "index": 0 }]
+        [{ "node": "Update: failed",   "type": "main", "index": 0 }]
       ]
     },
-    "Update: building": { "main": [[{ "node": "Prepare Deploy", "type": "main", "index": 0 }]] },
-    "Prepare Deploy": { "main": [[{ "node": "Get Job Record", "type": "main", "index": 0 }]] },
-    "Get Job Record": { "main": [[{ "node": "Deploy to CF Pages", "type": "main", "index": 0 }]] },
-    "Deploy to CF Pages": { "main": [[{ "node": "Build Tour URL", "type": "main", "index": 0 }]] },
-    "Build Tour URL": { "main": [[{ "node": "Update: done", "type": "main", "index": 0 }]] },
-    "Update: done": { "main": [[{ "node": "Send Email via Resend", "type": "main", "index": 0 }]] },
-    "Send Email via Resend": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Update: building": { "main": [[{ "node": "Prepare Deploy",    "type": "main", "index": 0 }]] },
+    "Prepare Deploy":   { "main": [[{ "node": "Get Job Record",    "type": "main", "index": 0 }]] },
+    "Get Job Record":   { "main": [[{ "node": "Deploy to CF Pages","type": "main", "index": 0 }]] },
+    "Deploy to CF Pages":{ "main": [[{ "node": "Build Tour URL",   "type": "main", "index": 0 }]] },
+    "Build Tour URL":   { "main": [[{ "node": "Update: done",      "type": "main", "index": 0 }]] },
+    "Update: done":     { "main": [[{ "node": "Send Email via Resend","type": "main", "index": 0 }]] },
+    "Send Email via Resend":{ "main": [[{ "node": "Respond",       "type": "main", "index": 0 }]] }
   }
 }
