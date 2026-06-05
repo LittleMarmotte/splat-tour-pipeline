@@ -122,19 +122,19 @@ def handler(job):
         ply_path = ply_files[0]
         print(f"  PLY: {ply_path} ({ply_path.stat().st_size / 1e6:.1f} MB)", flush=True)
 
-        # 5. splat-transform: .ply → .sog + collision .glb
-        print("[5/6] Converting to SOG + GLB", flush=True)
+        # 5. splat-transform: .ply → .sog
+        print("[5/6] Converting PLY to SOG", flush=True)
         sog_path = work_dir / "scene.sog"
-        glb_path = work_dir / "collision.glb"
         run_cmd(
-            f"splat-transform {ply_path} {sog_path} --export-collision {glb_path}",
+            f"splat-transform {ply_path} {sog_path}",
             timeout=300,
         )
+        if not sog_path.exists():
+            raise RuntimeError("splat-transform produced no .sog file")
 
         # 6. Upload outputs to R2
         print("[6/6] Uploading artifacts to R2", flush=True)
         s3.upload_file(str(sog_path), R2_BUCKET, f"outputs/{slug}/scene.sog")
-        s3.upload_file(str(glb_path), R2_BUCKET, f"outputs/{slug}/collision.glb")
         print("  Upload complete", flush=True)
 
         # Callback n8n WF03
@@ -143,7 +143,6 @@ def handler(job):
             "record_id": record_id,
             "status": "done",
             "r2_splat_path": f"outputs/{slug}/scene.sog",
-            "r2_collision_path": f"outputs/{slug}/collision.glb",
         }, timeout=30)
 
         return {"ok": True, "slug": slug}
