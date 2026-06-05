@@ -20,4 +20,4 @@ COPY run.py /app/run.py
 
 WORKDIR /app
 
-CMD ["python", "-u", "run.py"]
+CMD ["python3", "-u", "run.py"]
