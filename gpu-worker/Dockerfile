@@ -14,8 +14,7 @@ RUN pip install awscli --upgrade --quiet && \
     pip install -r /tmp/requirements.txt
 
 # Copy handler into the user's home directory
-COPY run.py /home/user/run.py
-RUN chown user:user /home/user/run.py
+COPY --chown=user /run.py /home/user/run.py
 
 # Switch back to 'user' so nerfstudio packages are on PYTHONPATH
 USER user
