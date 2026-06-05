@@ -48,6 +48,21 @@ def run_cmd(cmd, cwd=None):
 
 
 def handler(job):
+    # === DIAGNOSTICS — remove after first successful run ===
+    def diag(label, cmd):
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        print(f"[DIAG] {label}: {(r.stdout or r.stderr)[:400]}", flush=True)
+
+    diag("python3 path", "which python3")
+    diag("python3 sys.path", "python3 -c 'import sys; print(sys.path)'")
+    diag("ns-process-data shebang", "head -1 /home/user/.local/bin/ns-process-data")
+    diag("nerfstudio in .local", "find /home/user/.local/lib -name 'nerfstudio' -maxdepth 4 -type d 2>/dev/null | head -5")
+    diag("nerfstudio in /usr", "find /usr -name 'nerfstudio' -maxdepth 6 -type d 2>/dev/null | head -5")
+    diag("nerfstudio in /opt", "find /opt -name 'nerfstudio' -maxdepth 6 -type d 2>/dev/null | head -5")
+    diag("PYTHONPATH", f"echo $PYTHONPATH")
+    diag("python3 can import nerfstudio", "python3 -c 'import nerfstudio; print(nerfstudio.__file__)' 2>&1")
+    # === END DIAGNOSTICS ===
+
     job_input = job["input"]
     slug = job_input["slug"]
     video_r2_path = job_input["video_r2_path"]
