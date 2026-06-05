@@ -78,27 +78,17 @@ def handler(job):
         s3.download_file(R2_BUCKET, video_r2_path, str(video_path))
         print(f"  Video size: {video_path.stat().st_size / 1e6:.1f} MB", flush=True)
 
-        # 2. Extract frames with ffmpeg @ 2fps (max 300 frames to avoid huge datasets)
-        print("[2/7] Extracting frames at 2fps (max 300)", flush=True)
-        frames_dir = work_dir / "frames"
-        frames_dir.mkdir(exist_ok=True)
-        run_cmd(
-            f"ffmpeg -i {video_path} -vf fps=2 -frames:v 300 {frames_dir}/%05d.jpg -y",
-            timeout=120,
-        )
-        n_frames = len(list(frames_dir.glob("*.jpg")))
-        print(f"  Extracted {n_frames} frames", flush=True)
-
-        # 3. ns-process-data video → COLMAP
-        print("[3/7] Running ns-process-data (COLMAP)", flush=True)
+        # 2. ns-process-data video → COLMAP (cap at 150 frames to keep COLMAP fast)
+        print("[2/6] Running ns-process-data (COLMAP, max 150 frames)", flush=True)
         data_dir = work_dir / "data"
         run_cmd(
-            f"ns-process-data video --data {video_path} --output-dir {data_dir}",
-            stream=True, timeout=600,
+            f"ns-process-data video --data {video_path} --output-dir {data_dir} "
+            f"--num-frames-target 150",
+            stream=True, timeout=1800,
         )
 
-        # 4. ns-train splatfacto — stream output to avoid pipe deadlock
-        print("[4/7] Training splatfacto (7k iters)", flush=True)
+        # 3. ns-train splatfacto — stream output to avoid pipe deadlock
+        print("[3/6] Training splatfacto (7k iters)", flush=True)
         output_dir = work_dir / "output"
         run_cmd(
             f"ns-train splatfacto "
@@ -117,8 +107,8 @@ def handler(job):
         config_path = checkpoints[0]
         print(f"  Config: {config_path}", flush=True)
 
-        # 5. ns-export gaussian-splat → .ply
-        print("[5/7] Exporting Gaussian Splat (.ply)", flush=True)
+        # 4. ns-export gaussian-splat → .ply
+        print("[4/6] Exporting Gaussian Splat (.ply)", flush=True)
         export_dir = work_dir / "export"
         run_cmd(
             f"ns-export gaussian-splat "
@@ -132,8 +122,8 @@ def handler(job):
         ply_path = ply_files[0]
         print(f"  PLY: {ply_path} ({ply_path.stat().st_size / 1e6:.1f} MB)", flush=True)
 
-        # 6. splat-transform: .ply → .sog + collision .glb
-        print("[6/7] Converting to SOG + GLB", flush=True)
+        # 5. splat-transform: .ply → .sog + collision .glb
+        print("[5/6] Converting to SOG + GLB", flush=True)
         sog_path = work_dir / "scene.sog"
         glb_path = work_dir / "collision.glb"
         run_cmd(
@@ -141,8 +131,8 @@ def handler(job):
             timeout=300,
         )
 
-        # 7. Upload outputs to R2
-        print("[7/7] Uploading artifacts to R2", flush=True)
+        # 6. Upload outputs to R2
+        print("[6/6] Uploading artifacts to R2", flush=True)
         s3.upload_file(str(sog_path), R2_BUCKET, f"outputs/{slug}/scene.sog")
         s3.upload_file(str(glb_path), R2_BUCKET, f"outputs/{slug}/collision.glb")
         print("  Upload complete", flush=True)
