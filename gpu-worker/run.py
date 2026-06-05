@@ -78,26 +78,26 @@ def handler(job):
         s3.download_file(R2_BUCKET, video_r2_path, str(video_path))
         print(f"  Video size: {video_path.stat().st_size / 1e6:.1f} MB", flush=True)
 
-        # 2. ns-process-data video → COLMAP (cap at 150 frames to keep COLMAP fast)
-        print("[2/6] Running ns-process-data (COLMAP, max 150 frames)", flush=True)
+        # 2. ns-process-data video → COLMAP (300 frames for better coverage)
+        print("[2/6] Running ns-process-data (COLMAP, max 300 frames)", flush=True)
         data_dir = work_dir / "data"
         run_cmd(
             f"ns-process-data video --data {video_path} --output-dir {data_dir} "
-            f"--num-frames-target 150",
-            stream=True, timeout=1800,
+            f"--num-frames-target 300",
+            stream=True, timeout=2400,
         )
 
-        # 3. ns-train splatfacto — stream output to avoid pipe deadlock
-        print("[3/6] Training splatfacto (7k iters)", flush=True)
+        # 3. ns-train splatfacto — 30k iters for better quality
+        print("[3/6] Training splatfacto (30k iters)", flush=True)
         output_dir = work_dir / "output"
         run_cmd(
             f"ns-train splatfacto "
             f"--data {data_dir} "
             f"--output-dir {output_dir} "
-            f"--max-num-iterations 7000 "
+            f"--max-num-iterations 30000 "
             f"--viewer.quit-on-train-completion True "
             f"nerfstudio-data",
-            stream=True, timeout=3600,
+            stream=True, timeout=7200,
         )
 
         # Find the config file
