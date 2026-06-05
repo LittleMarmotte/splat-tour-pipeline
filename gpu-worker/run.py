@@ -3,12 +3,27 @@ RunPod Serverless handler — Gaussian Splat pipeline
 Input: { slug, video_r2_path, callback_url, airtable_record_id }
 """
 import os
+import glob
 import subprocess
 import shutil
+import sys
 import runpod
 import boto3
 import requests
 from pathlib import Path
+
+# Ensure nerfstudio packages are on PYTHONPATH for all subprocesses.
+# dromni/nerfstudio installs nerfstudio via `pip install --user` for the
+# 'user' account, so packages live in /home/user/.local/lib/pythonX.Y/site-packages/.
+# Exec-form CMD does NOT source .bashrc so we add the path manually.
+_user_site = glob.glob('/home/user/.local/lib/python*/site-packages')
+_extra_path = ':'.join(_user_site)
+if _extra_path:
+    os.environ['PYTHONPATH'] = _extra_path + ':' + os.environ.get('PYTHONPATH', '')
+    print(f"[init] PYTHONPATH set to: {os.environ['PYTHONPATH']}", flush=True)
+
+# Also ensure user local bin (ns-process-data etc.) is on PATH
+os.environ['PATH'] = '/home/user/.local/bin:' + os.environ.get('PATH', '')
 
 R2_ENDPOINT = os.environ["R2_ENDPOINT"]
 R2_ACCESS_KEY = os.environ["R2_ACCESS_KEY_ID"]
