@@ -8,16 +8,17 @@ RUN apt-get remove -y nodejs libnode-dev libnode72 2>/dev/null || true && \
     apt-get install -y -o Dpkg::Options::="--force-overwrite" nodejs && \
     npm install -g @playcanvas/splat-transform
 
-# Install AWS CLI for R2 access
-RUN pip install awscli --upgrade --quiet
+# Install Python dependencies as the 'user' (so nerfstudio env is accessible)
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install awscli --upgrade --quiet && \
+    pip install -r /tmp/requirements.txt
 
-# Install Python dependencies
-COPY requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
+# Copy handler into the user's home directory
+COPY run.py /home/user/run.py
+RUN chown user:user /home/user/run.py
 
-# Copy handler
-COPY run.py /app/run.py
-
-WORKDIR /app
+# Switch back to 'user' so nerfstudio packages are on PYTHONPATH
+USER user
+WORKDIR /home/user
 
 CMD ["python3", "-u", "run.py"]
